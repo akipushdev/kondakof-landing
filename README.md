@@ -58,6 +58,64 @@
 
 *Если в будущем захотите поменять бота или чат — параметры находятся в `index.html` на строках `~670` (`botToken` и `chatId`).*
 
+### 🔒 Опционально: Как скрыть токен Telegram-бота через Google Apps Script (без бэкенда)
+Сейчас всё работает напрямую из браузера. Но если вы не хотите, чтобы токен бота был виден в коде страницы (`View Source`), можно за 3 минуты сделать бесплатный защитный шлюз на Google Drive, который заодно сохраняет все лиды в Google Таблицу:
+
+1. **Создайте Google Таблицу:**
+   - Откройте Google Таблицы и создайте файл, например: *«Лиды KONDAKOF»*.
+2. **Откройте редактор скриптов:**
+   - В верхнем меню таблицы нажмите: **Расширения** → **Apps Script**.
+3. **Вставьте код скрипта (токен будет спрятан внутри):**
+   ```javascript
+   function doPost(e) {
+     try {
+       var data = JSON.parse(e.postData.contents);
+       
+       // 1. Автоматически сохраняем заявку в Google Таблицу
+       var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+       sheet.appendRow([
+         new Date(),
+         data.source || '',
+         data.name || '',
+         data.contact || '',
+         data.facade || '',
+         data.zones || '',
+         data.stage || '',
+         data.comment || '',
+         data.utm || ''
+       ]);
+       
+       // 2. Отправляем сообщение в Telegram Дмитрию
+       var botToken = "7819822579:AAHV7bWcrxkGl9X-kXbSL_Bos3XrzMDmCvQ";
+       var chatId = "332066778";
+       
+       var response = UrlFetchApp.fetch("https://api.telegram.org/bot" + botToken + "/sendMessage", {
+         method: "post",
+         contentType: "application/json",
+         payload: JSON.stringify({
+           chat_id: chatId,
+           text: data.text,
+           parse_mode: "Markdown"
+         })
+       });
+       
+       return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+         .setMimeType(ContentService.MimeType.JSON);
+     } catch (err) {
+       return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.toString() }))
+         .setMimeType(ContentService.MimeType.JSON);
+     }
+   }
+   ```
+4. **Опубликуйте веб-приложение:**
+   - Нажмите синюю кнопку вверху: **Развернуть (Deploy)** → **Новое развертывание (New deployment)**.
+   - Выберите тип: **Веб-приложение (Web app)**.
+   - В поле *У кого есть доступ (Who has access)* выберите: **Все (Anyone)**.
+   - Нажмите **Развернуть** и скопируйте полученный URL (вида `https://script.google.com/macros/s/AKfycb.../exec`).
+5. **В файле `index.html`:**
+   - Замените адрес в функции `fetch(...)` с Telegram API на полученный Google Script URL.
+   - Теперь токен бота надёжно скрыт на серверах Google, а вы получаете автоматическую CRM-таблицу со всеми клиентами!
+
 ---
 
 ## 📊 КАК ПЕРЕВЕСТИ САЙТ НА СВОЮ АНАЛИТИКУ
